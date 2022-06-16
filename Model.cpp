@@ -3,7 +3,7 @@
 using namespace std;
 
 
-Model::Model(string fileName,int setSize):fileName(fileName),setSize(setSize)
+Model::Model(string fileName,int setSize,double wGrad):fileName(fileName),setSize(setSize),wGrad(wGrad)
 {
 
 	init();
@@ -13,25 +13,27 @@ Model::Model(string fileName,int setSize):fileName(fileName),setSize(setSize)
 	validVertexNum = vertexBuffer.size();
 	maxValidPos = tetraBuffer.size() - 1;
 	setScale();
-
+	addQ();
 	return;
 }
 
-Model::Model(string fileName, vector<string> divNames, int setSize) :fileName(fileName), setSize(setSize)
-{
-
-	init();
-
-	for (string divName : divNames) {
-		readDiv(divName,1);
-	}
-
-	validVertexNum = vertexBuffer.size();
-	maxValidPos = tetraBuffer.size() - 1;
-	setScale();
-
-	return;
-}
+//Model::Model(string fileName, vector<string> divNames, int setSize):fileName(fileName),setSize(setSize)
+//{
+//
+//	init();
+//
+//	for (string divName : divNames) {
+//		readDiv(divName,1);
+//	}
+//
+//	validVertexNum = vertexBuffer.size();
+//	maxValidPos = tetraBuffer.size() - 1;
+//
+//	//addQ();
+//	setScale();
+//
+//	return;
+//}
 
 void Model::outputVtk(string fileName)
 {
@@ -39,11 +41,9 @@ void Model::outputVtk(string fileName)
 	vtkNew<vtkUnstructuredGrid>unGrid;
 	vtkNew<vtkPoints>points;
 	vtkNew<vtkCellArray>cellArray;
-	vtkNew<vtkDoubleArray>doubleArray,border;
+	vtkNew<vtkDoubleArray>doubleArray;
 	doubleArray->SetNumberOfComponents(1);
-	border->SetNumberOfComponents(1);
 	doubleArray->SetName("attr");
-	border->SetName("border");
 	for (Vertex v : vertexBuffer) {
 		double pos[3];
 		if (v.tetras.size() == 0) {
@@ -59,19 +59,7 @@ void Model::outputVtk(string fileName)
 			}
 		}
 		points->InsertNextPoint(pos);
-		doubleArray->InsertNextTuple1(v.Q.p(3));
-		switch (v.state)
-		{
-		case Cut:
-			border->InsertNextTuple1(2);
-			break;
-		case Border:
-			border->InsertNextTuple1(0);
-			break;
-		default:
-			border->InsertNextTuple1(1);
-			break;
-		}
+		doubleArray->InsertNextTuple1(v.Q.p(3)/rate);
 	}
 
 
@@ -90,7 +78,6 @@ void Model::outputVtk(string fileName)
 	unGrid->SetPoints(points);
 	unGrid->SetCells(10, cellArray);
 	unGrid->GetPointData()->AddArray(doubleArray);
-	unGrid->GetPointData()->AddArray(border);
 	vtkNew<vtkUnstructuredGridWriter>writer;
 	writer->SetInputData(unGrid);
 	writer->SetFileName(outputPath.c_str());
@@ -123,8 +110,9 @@ void Model::outputDiv(string fileName)
 			for (int j = 0; j < 4; j++) {
 				buffer[j + 1] = v.Q.p[j];
 			}
-			buffer[5] = buffer[6] = 0;
+			buffer[5] = 0;
 			buffer[4] /= rate;
+			buffer[6] = buffer[4];
 			outputFs.write((char*)buffer, sizeof(buffer));
 		}
 	}
@@ -166,7 +154,7 @@ void Model::readDiv(string divName,bool tmp)
 			if (vMap[iov.id]) {
 				continue;
 			}
-			pos << iov.pa[0], iov.pa[1], iov.pa[2], iov.pa[5];
+			pos << iov.pa[0], iov.pa[1], iov.pa[2], iov.pa[3];
 			for (int i = 0; i < 4; i++) {
 				lowBound[i] = min(lowBound[i], (double)iov.pa[i]);
 				upBound[i] = max(lowBound[i], (double)iov.pa[i]);
@@ -200,6 +188,7 @@ void Model::setScale()
 	posScale = pow(posScale, 1.0 / 3) / (upBound[3] - lowBound[3]);
 	for (int i = 0; i < vertexBuffer.size(); i++) {
 		vertexBuffer[i].Q.p[3] *= posScale;
+		//vertexBuffer[i].Q.p[3] *= 0;
 	}
 	rate = posScale;
 }
@@ -226,44 +215,11 @@ int Model::addTetra(int vs[4])
 		vertexs[i] = vMap[vs[i]];
 		vertexBuffer[vertexs[i]].tetras.push_back(index);
 	}
+
 	Tetra t(index, vertexs);
 	tetraBuffer.push_back(t);
 	tetraPos.push_back(index);
 
-	//更新Q
-	//以第三个顶点为起点的三个方向向量
-	Vector4d direct[3];
-	Matrix<double, 3, 4> vM;
-	Matrix4d I = Matrix4d::Identity();
-	for (int i = 0; i < 3; i++){
-		direct[i] = vertexBuffer[vertexs[i]].Q.p - vertexBuffer[vertexs[3]].Q.p;
-		vM.row(i) = (direct[i].transpose());
-	}
-	Vector4d n = Vector4d::Zero();
-	for (int i = 0; i < 4; i++) {
-		int cnt = 0;
-		Matrix3d tmpM = Matrix3d::Zero();
-		for (int j = 0; j < 4; j++) {
-			if (j == i)continue;
-			tmpM.col(cnt++) = vM.col(j);
-		}
-		n += I.col(i) * pow(-1, i) * tmpM.determinant();
-	}
-
-	Vector3d poss[4];
-	for (int i = 0; i < 4; i++) {
-		poss[i] = vertexBuffer[vertexs[i]].Q.p.block(0, 0, 3, 1);
-	}
-	double deter = abs(getDetermination(poss));
-
-	Matrix4d A = n * n.transpose();
-	A *= 1.5;// / abs(deter);
-
-	for (int i = 0; i < 4; i++) {
-		vertexBuffer[vertexs[i]].Q.A += A;
-	}
-
-	
 	sort(vertexs,vertexs+4);
 	tuple<int,int,int> tups[4] = {
 		tuple<int,int,int>(vertexs[0],vertexs[1],vertexs[2]),
@@ -284,7 +240,7 @@ int Model::addTetra(int vs[4])
 	return index;
 }
 
-void Model::selectBorder()
+void Model::selectBorder(double borderWeight)
 {
 	set<int>cutSet,borderSet;
 	for (auto i : borderMap) {
@@ -302,8 +258,7 @@ void Model::selectBorder()
 		e1.normalize();
 		Matrix4d A = Matrix4d::Identity();
 		A -= (e0 * e0.transpose() + e1 * e1.transpose());
-		A *= abs(deter) / 6.0 * 2;
-
+		A = A * abs(deter) / 6.0 * borderWeight;
 		for (int j = 0; j < 3; j++) {
 			if (vertexBuffer[vPos[j]].state != Cut) {
 				vertexBuffer[vPos[j]].state = Border;
@@ -345,13 +300,14 @@ void Model::simplification(double rate)
 			e = getMin();
 		}
 		if (contractable(e)) {
+			errArr.push_back(e.Q.e);
 			directContract(e.index, e.Q);
 			run = 0;
 		}else{
 			run++;
 		}
 	}
-	if (run >= 3000) {
+	if (run >= 30) {
 		cout << "run : " << run << endl;
 	}
 }
@@ -458,7 +414,7 @@ Edge Model::getRandomEdge()
 	}
 	ans.index[0] = tetraBuffer[tetraPos].vertexs[index[0]];
 	ans.index[1] = tetraBuffer[tetraPos].vertexs[index[1]];
-	ans.Q.Sum(vertexBuffer[ans.index[0]].Q, vertexBuffer[ans.index[1]].Q);
+	//ans.Q.Sum(vertexBuffer[ans.index[0]].Q, vertexBuffer[ans.index[1]].Q);
 	
 	return ans;
 }
@@ -468,24 +424,33 @@ Edge Model::getMin()
 	static double lastErr = 0;
 	bool stored = false;
 	Edge minE;
+	double minError = 1e20;
 	for (int j = 0; j < 2; j++) {
 		for (int i = 0; i < setSize; i++) {
 			Edge e = getRandomEdge();
 			if (!stored) {
+				e.Q.Sum(vertexBuffer[e.index[0]].Q, vertexBuffer[e.index[1]].Q);
 				minE = e;
+				minError = e.Q.e + wGrad * abs(vertexBuffer[e.index[0]].Q.p(3) - vertexBuffer[e.index[1]].Q.p(3));
 				stored = true;
 			}
 			else {
-				if (e.Q.e < minE.Q.e) {
+				if (vertexBuffer[e.index[0]].Q.e + vertexBuffer[e.index[1]].Q.e > minError) {
+					continue;
+				}
+				e.Q.Sum(vertexBuffer[e.index[0]].Q, vertexBuffer[e.index[1]].Q);
+				double error = e.Q.e + wGrad * abs(vertexBuffer[e.index[0]].Q.p(3) - vertexBuffer[e.index[1]].Q.p(3));
+				if (error < minError) {
 					minE = e;
+					minError = error;
 				}
 			}
 		}
-		if (lastErr != 0 && ((minE.Q.e - lastErr) / lastErr <= 0.4)) {
+		if (lastErr != 0 && ((minError - lastErr) / lastErr <= 0.4)) {
 			break;
 		};
 	}
-	lastErr = minE.Q.e;
+	lastErr = minError;
 	return minE;
 }
 
@@ -571,15 +536,56 @@ bool Model::tetraHaveCut(int tIndex)
 	}
 	return false;
 }
-void Model::setErr()
+
+void Model::getError()
 {
-	for (int i = 0; i < vertexBuffer.size(); i++) {
-		if (vertexBuffer[i].state == Invalid)continue;
-		maxErr = max(maxErr, vertexBuffer[i].Q.e);
-		avgErr += vertexBuffer[i].Q.e;
+	double maxErr = 0,avgErr = 0;
+	for (double err : errArr) {
+		maxErr = max(maxErr, err);
+		avgErr += err;
 	}
-	avgErr /= validVertexNum;
+	cout << "Max Err:" << maxErr << endl;
+	cout << "Avg Err:" << avgErr / errArr.size() << endl;
 }
+
+void Model::addQ()
+{
+	for (int j = 0; j < tetraBuffer.size(); j++) {
+		int* vertexs = tetraBuffer[j].vertexs;
+		Vector4d direct[3];
+		Matrix<double, 3, 4> vM;
+		Matrix4d I = Matrix4d::Identity();
+		for (int i = 0; i < 3; i++) {
+			direct[i] = vertexBuffer[vertexs[i]].Q.p - vertexBuffer[vertexs[3]].Q.p;
+			vM.row(i) = (direct[i].transpose());
+		}
+		Vector4d n = Vector4d::Zero();
+		for (int i = 0; i < 4; i++) {
+			int cnt = 0;
+			Matrix3d tmpM = Matrix3d::Zero();
+			for (int j = 0; j < 4; j++) {
+				if (j == i)continue;
+				tmpM.col(cnt++) = vM.col(j);
+			}
+			n += I.col(i) * pow(-1, i) * tmpM.determinant();
+		}
+
+		Vector3d poss[4];
+		for (int i = 0; i < 4; i++) {
+			poss[i] = vertexBuffer[vertexs[i]].Q.p.block(0, 0, 3, 1);
+		}
+		double deter = abs(getDetermination(poss));
+
+		Matrix4d A = n * n.transpose();
+		A *= 1.5 * abs(deter);
+
+		for (int i = 0; i < 4; i++) {
+			vertexBuffer[vertexs[i]].Q.A += A;
+		}
+	}
+
+}
+
 vector<int> Intersction(vector<vector<int>> vectors)
 {
 	vector<int>ans;

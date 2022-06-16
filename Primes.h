@@ -70,6 +70,7 @@ public:
 	QEF(QEF& Q1, QEF& Q2, Vector4d x);
 	void Sum(QEF& Q1, QEF& Q2);
 	void Scale(double f);
+	double getErr(Vector4d x);
 
 	Matrix4d A;
 	Vector4d p;

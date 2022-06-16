@@ -72,6 +72,11 @@ void QEF::Scale(double f)
 	e *= f;
 }
 
+double QEF::getErr(Vector4d x)
+{
+	return (x-p).transpose() * A * (x-p) + e;
+}
+
 
 
 bool ConjugateR(Matrix4d A1, Matrix4d A2, Vector4d p1, Vector4d& x)

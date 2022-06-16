@@ -1,11 +1,6 @@
-﻿  Model.cpp
+﻿D:\Program Files (x86)\Microsoft Visual Studio\2019\Community\MSBuild\Microsoft\VC\v160\Microsoft.CppBuild.targets(513,5): warning MSB8028: 中间目录(x64\Debug\)包含从另一个项目(TetraRandom.vcxproj)共享的文件。   这会导致错误的清除和重新生成行为。
+  GradRandom.cpp
 F:\CppLib\Eigen\eigen-3.4.0\Eigen\src\Core\arch\Default\Half.h(1,1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
 F:\CppLib\Eigen\eigen-3.4.0\Eigen\src\Core\arch\Default\BFloat16.h(1,1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
 F:\CppLib\Eigen\eigen-3.4.0\Eigen\src\Core\arch\Default\GenericPacketMathFunctions.h(676,1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
-C:\Users\50120\Desktop\graduate\TetraRandom\TetraRandom\Model.cpp(13,38): warning C4267: “=”: 从“size_t”转换到“int”，可能丢失数据
-C:\Users\50120\Desktop\graduate\TetraRandom\TetraRandom\Model.cpp(14,38): warning C4267: “=”: 从“size_t”转换到“int”，可能丢失数据
-C:\Users\50120\Desktop\graduate\TetraRandom\TetraRandom\Model.cpp(29,38): warning C4267: “=”: 从“size_t”转换到“int”，可能丢失数据
-C:\Users\50120\Desktop\graduate\TetraRandom\TetraRandom\Model.cpp(30,38): warning C4267: “=”: 从“size_t”转换到“int”，可能丢失数据
-C:\Users\50120\Desktop\graduate\TetraRandom\TetraRandom\Model.cpp(208,33): warning C4267: “初始化”: 从“size_t”转换到“int”，可能丢失数据
-C:\Users\50120\Desktop\graduate\TetraRandom\TetraRandom\Model.cpp(218,32): warning C4267: “初始化”: 从“size_t”转换到“int”，可能丢失数据
-  TetraRandom.vcxproj -> C:\Users\50120\Desktop\graduate\TetraRandom\x64\Debug\TetraRandom.exe
+  TetraRandom.vcxproj -> C:\Users\50120\Desktop\graduate\GradRandom\x64\Debug\GradRandom.exe

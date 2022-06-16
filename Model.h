@@ -26,7 +26,7 @@ using namespace std;
 vector<int> Intersction(vector<vector<int>>vectors);
 
 
-const double EPS = 1e-6;
+const double EPS = 0;
 
 
 
@@ -40,10 +40,11 @@ public:
 	double avgErr = 0;
 	double maxErr = 0;
 	double lowBound[4], upBound[4];
-	double rate = 0;
+	double rate = 1;
+	double wGrad = 1;
 	Model() {};
-	Model(string fileName,int setSize);
-	Model(string fileName, vector<string> divNames, int setSize);
+	Model(string fileName,int setSize,double wGrad);
+	//Model(string fileName, vector<string> divNames, int setSize);
 	~Model() {};
 
 	void init();
@@ -70,7 +71,7 @@ public:
 	double getDetermination(Vector3d vectors[4]);
 	//检测后确定两个点可以收缩时使用
 	void directContract(int vIndex[2],QEF Q);
-	void selectBorder();
+	void selectBorder(double borderWeight);
 	void swapTetra(int t0, int t1);
 	Edge getRandomEdge();
 	Edge getMin();
@@ -80,5 +81,7 @@ public:
 	void print();
 	bool tetraHaveCut(int tIndex);
 
-	void setErr();
+	vector<double>errArr;
+	void getError();
+	void addQ();
 };
